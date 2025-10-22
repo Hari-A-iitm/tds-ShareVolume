@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="share-entity-name">Bio-Techne</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #share-entity-name {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 id="share-entity-name">Bio-Techne</h1>
+        <p>Max Shares: <span id="share-max-value"></span> (<span id="share-max-fy"></span>)</p>
+        <p>Min Shares: <span id="share-min-value"></span> (<span id="share-min-fy"></span>)</p>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const cik = urlParams.get('CIK') || '0000842023';
+        const userAgent = 'Your Company Name https://www.yourcompany.com';
+        const secUrl = `https://data.sec.gov/api/xbrl/companyconcept/CIK${cik}/dei/EntityCommonStockSharesOutstanding.json`;
+
+        fetch(secUrl, { headers: { 'User-Agent': userAgent } })
+            .then(response => response.json())
+            .then(data => {
+                const entityName = data.entityName;
+                document.title = entityName;
+                document.getElementById('share-entity-name').innerText = entityName;
+
+                const shares = data.units.shares.filter(share => share.fy > '2020' && !isNaN(share.val));
+                if (shares.length > 0) {
+                    const maxShare = shares.reduce((max, current) => current.val > max.val ? current : max, shares[0]);
+                    const minShare = shares.reduce((min, current) => current.val < min.val ? current : min, shares[0]);
+
+                    document.getElementById('share-max-value').innerText = maxShare.val;
+                    document.getElementById('share-max-fy').innerText = maxShare.fy;
+                    document.getElementById('share-min-value').innerText = minShare.val;
+                    document.getElementById('share-min-fy').innerText = minShare.fy;
+
+                    const jsonData = {
+                        entityName: entityName,
+                        max: { val: maxShare.val, fy: maxShare.fy },
+                        min: { val: minShare.val, fy: minShare.fy }
+                    };
+
+                    // Save data.json (this will not work in a browser due to security restrictions)
+                    // const blob = new Blob([JSON.stringify(jsonData)], { type: 'application/json' });
+                    // const url = URL.createObjectURL(blob);
+                    // const a = document.createElement('a');
+                    // a.href = url;
+                    // a.download = 'data.json';
+                    // a.click();
+                } else {
+                    console.error('No shares found');
+                }
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    </script>
+</body>
+</html>
